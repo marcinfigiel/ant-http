@@ -171,6 +171,8 @@ public class HttpClient {
           ssl.init(null, getInsecureTrustManagers(), null);
         } else if (null != keyStore) {
           ssl.init(null, getTrustManagers(), null);
+        } else {
+          ssl.init(null, null, null);
         }
         ((HttpsURLConnection) httpUrlConnection).setSSLSocketFactory(ssl.getSocketFactory());
       }
