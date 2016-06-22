@@ -59,6 +59,8 @@ public class HttpClientTask extends Task implements Condition
   protected int expected = 200;
   protected boolean failOnUnexpected = true;
   protected boolean update = true;
+  protected boolean ignoreCertificateErrors = false;
+
   protected int logLevel = Project.MSG_INFO;
 
   // http task parameters
@@ -354,6 +356,10 @@ public class HttpClientTask extends Task implements Condition
         }
       }
 
+      if (ignoreCertificateErrors) {
+        builder.ignoreCertificateErrors();
+      }
+
       httpClient = builder.toHttpClient();
 
     } catch (final Throwable t) {
@@ -439,6 +445,10 @@ public class HttpClientTask extends Task implements Condition
 
   public void setUpdate(final boolean update) {
     this.update = update;
+  }
+
+  public void setIgnoreCertificateErrors(final boolean ignoreCertificateErrors) {
+    this.ignoreCertificateErrors = ignoreCertificateErrors;
   }
 
   public String getEntityProperty() {

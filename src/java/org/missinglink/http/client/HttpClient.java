@@ -24,6 +24,11 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -34,7 +39,9 @@ import java.util.Map.Entry;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 
 import org.missinglink.http.encoding.Base64;
 import org.missinglink.http.exception.HttpCertificateException;
@@ -76,11 +83,14 @@ public class HttpClient {
   protected boolean binaryEntity = false;
   protected InputStream keyStore;
   protected String keyStorePassword;
+  protected boolean ignoreCertificateErrors = false;
 
   protected Map<String, String> queryUnencoded = new LinkedHashMap<>();
   protected Map<String, String> queryEncoded = new LinkedHashMap<>();
 
   protected Map<String, String> headers = new HashMap<>();
+
+  private static final TrustManager[] INSECURE_TRUST_MANAGER = new TrustManager[] { new InsecureTrustManager() };
 
   protected HttpClient() {
     super();
@@ -156,17 +166,13 @@ public class HttpClient {
 
       // if HTTPS, check for HTTPS options
       if (HTTPS.equalsIgnoreCase(protocol)) {
-        if (null != keyStore) {
-          final KeyStore ks = KeyStore.getInstance("JKS");
-          ks.load(keyStore, null == keyStorePassword ? new char[]{} : keyStorePassword.toCharArray());
-          final TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-          tmf.init(ks);
-
-          final SSLContext ssl = SSLContext.getInstance("TLS");
-          ssl.init(null, tmf.getTrustManagers(), null);
-
-          ((HttpsURLConnection) httpUrlConnection).setSSLSocketFactory(ssl.getSocketFactory());
+        final SSLContext ssl = SSLContext.getInstance("TLS");
+        if (ignoreCertificateErrors) {
+          ssl.init(null, getInsecureTrustManagers(), null);
+        } else if (null != keyStore) {
+          ssl.init(null, getTrustManagers(), null);
         }
+        ((HttpsURLConnection) httpUrlConnection).setSSLSocketFactory(ssl.getSocketFactory());
       }
 
       // if username is set, add BASIC authentication header
@@ -274,6 +280,19 @@ public class HttpClient {
       }
     }
     return sb.toString();
+  }
+
+  protected TrustManager[] getTrustManagers()
+        throws CertificateException, NoSuchAlgorithmException, IOException, KeyStoreException {
+    final KeyStore ks = KeyStore.getInstance("JKS");
+    ks.load(keyStore, null == keyStorePassword ? new char[]{} : keyStorePassword.toCharArray());
+    final TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+    tmf.init(ks);
+    return tmf.getTrustManagers();
+  }
+
+  protected TrustManager[] getInsecureTrustManagers() {
+    return INSECURE_TRUST_MANAGER;
   }
 
   /**
@@ -663,6 +682,26 @@ public class HttpClient {
       httpClient.keyStore = is;
       httpClient.keyStorePassword = password;
       return this;
+    }
+
+    public HttpClientBuilder ignoreCertificateErrors() {
+      httpClient.ignoreCertificateErrors = true;
+      return this;
+    }
+
+  }
+
+  protected static class InsecureTrustManager implements X509TrustManager {
+
+    @Override
+    public void checkClientTrusted(final X509Certificate[] x509Certificates, final String s) throws CertificateException {}
+
+    @Override
+    public void checkServerTrusted(final X509Certificate[] x509Certificates, final String s) throws CertificateException {}
+
+    @Override
+    public X509Certificate[] getAcceptedIssuers() {
+      return new X509Certificate[0];
     }
 
   }
