@@ -30,6 +30,7 @@ import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.DefaultLogger;
 import org.apache.tools.ant.Project;
 import org.apache.tools.ant.Task;
+import org.apache.tools.ant.taskdefs.condition.Condition;
 import org.missinglink.http.client.HttpClient;
 import org.missinglink.http.client.HttpClient.HttpClientBuilder;
 import org.missinglink.http.client.HttpMethod;
@@ -37,7 +38,8 @@ import org.missinglink.http.client.HttpResponse;
 import org.missinglink.http.exception.HttpCertificateException;
 import org.missinglink.http.exception.HttpInvocationException;
 
-public class HttpClientTask extends Task {
+public class HttpClientTask extends Task implements Condition
+{
 
   // ant parameters
   protected String url;
@@ -61,6 +63,7 @@ public class HttpClientTask extends Task {
 
   // http task parameters
   protected HttpClient httpClient;
+
 
   public HttpClientTask() {
     super();
@@ -87,7 +90,7 @@ public class HttpClientTask extends Task {
     }
 
     // invoke HttpClient
-    HttpResponse response = null;
+    HttpResponse response;
 
     log("********************", Project.MSG_VERBOSE);
     log("HTTP Request", Project.MSG_VERBOSE);
@@ -139,16 +142,12 @@ public class HttpClientTask extends Task {
 
     try {
       response = httpClient.invoke();
-    } catch (final HttpInvocationException e) {
-      throw new BuildException(e);
-    } catch (final HttpCertificateException e) {
-      throw new BuildException(e);
-    } catch (final Throwable t) {
+    }
+    catch (final Throwable t) {
       throw new BuildException(t);
     }
 
     if (null != response) {
-
       // Issue 21 - Write status to a property
       if (null != getStatusProperty() && getStatusProperty().length() > 0) {
         getProject().setProperty(getStatusProperty(), Integer.toString(response.getStatus()));
@@ -225,6 +224,21 @@ public class HttpClientTask extends Task {
     }
   }
 
+  @Override
+  public boolean eval()
+  {
+    try
+    {
+      init();
+      execute();
+    }
+    catch (final BuildException e)
+    {
+      return false;
+    }
+    return true;
+  }
+
   // Issue 13 - This can be used to determine the current logging level,
   // allowing for different logs altogether for INFO/VERBOSE
   protected int getLogLevel() {
@@ -246,7 +260,7 @@ public class HttpClientTask extends Task {
   /**
    * For use to fix Issue 13, returns true only if the log level is
    * {@link Project#MSG_INFO}
-   * 
+   *
    * @return
    */
   protected boolean isInfo() {
@@ -256,7 +270,7 @@ public class HttpClientTask extends Task {
   /**
    * For use to fix Issue 13, returns true only if the log level is
    * {@link Project#MSG_VERBOSE} or {@link Project#MSG_DEBUG}
-   * 
+   *
    * @return
    */
   protected boolean isVerbose() {
@@ -434,4 +448,5 @@ public class HttpClientTask extends Task {
   public void setEntityProperty(final String entityProperty) {
     this.entityProperty = entityProperty;
   }
+
 }
