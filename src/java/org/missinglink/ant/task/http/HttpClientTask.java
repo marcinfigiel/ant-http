@@ -35,8 +35,6 @@ import org.missinglink.http.client.HttpClient;
 import org.missinglink.http.client.HttpClient.HttpClientBuilder;
 import org.missinglink.http.client.HttpMethod;
 import org.missinglink.http.client.HttpResponse;
-import org.missinglink.http.exception.HttpCertificateException;
-import org.missinglink.http.exception.HttpInvocationException;
 
 public class HttpClientTask extends Task implements Condition
 {
@@ -234,8 +232,9 @@ public class HttpClientTask extends Task implements Condition
       init();
       execute();
     }
-    catch (final BuildException e)
+    catch (final Throwable t)
     {
+      log(t, Project.MSG_ERR);
       return false;
     }
     return true;

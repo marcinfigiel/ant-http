@@ -28,7 +28,6 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -90,7 +89,6 @@ public class HttpClient {
 
   protected Map<String, String> headers = new HashMap<>();
 
-  private static final TrustManager[] INSECURE_TRUST_MANAGER = new TrustManager[] { new InsecureTrustManager() };
 
   protected HttpClient() {
     super();
@@ -169,6 +167,7 @@ public class HttpClient {
         final SSLContext ssl = SSLContext.getInstance("TLS");
         if (ignoreCertificateErrors) {
           ssl.init(null, getInsecureTrustManagers(), null);
+          ((HttpsURLConnection) httpUrlConnection).setHostnameVerifier((hostname, sslSession) -> true);
         } else if (null != keyStore) {
           ssl.init(null, getTrustManagers(), null);
         } else {
@@ -294,7 +293,7 @@ public class HttpClient {
   }
 
   protected TrustManager[] getInsecureTrustManagers() {
-    return INSECURE_TRUST_MANAGER;
+    return new TrustManager[] { new InsecureTrustManager() };
   }
 
   /**
@@ -696,10 +695,10 @@ public class HttpClient {
   protected static class InsecureTrustManager implements X509TrustManager {
 
     @Override
-    public void checkClientTrusted(final X509Certificate[] x509Certificates, final String s) throws CertificateException {}
+    public void checkClientTrusted(final X509Certificate[] chain, final String authType) throws CertificateException {}
 
     @Override
-    public void checkServerTrusted(final X509Certificate[] x509Certificates, final String s) throws CertificateException {}
+    public void checkServerTrusted(final X509Certificate[] chain, final String authType) throws CertificateException {}
 
     @Override
     public X509Certificate[] getAcceptedIssuers() {
